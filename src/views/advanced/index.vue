@@ -68,11 +68,27 @@ export default {
                         values: "女",
                       } //你的业务数据
                     }
+                  },
+                  {
+                    id: 6,
+                    type: "condition-text", //条件节点
+                    width: 90,
+                    height: 44,
+                    level: 1, //判断它是第几级的条件节点
+                    edgeText: "",
+                    data: {
+                      complete: true,
+                      form: {
+                        cnName: "性别",
+                        relation: "包含",
+                        values: "其他",
+                      } //你的业务数据
+                    }
                   }
                 ]
               },
               {
-                id: 6,
+                id: 7,
                 type: "condition-text", //条件节点
                 width: 90,
                 height: 44,
@@ -88,28 +104,17 @@ export default {
                 },
                 children: [
                   {
-                    id: 7,
-                    type: "relative", //关系节点
-                    width: 44,
-                    height: 44,
+                    id: 9,
+                    type: "vue-shape", //自定义组件 业务节点
+                    width: 633,
+                    height: 38,
+                    level: 1,
+                    edgeText: "并且",
                     data: {
-                      relative: "and" //and并且 or或者
-                    },
-                    children: [
-                      {
-                        id: 8,
-                        type: "vue-shape", //自定义组件 业务节点
-                        width: 633,
-                        height: 38,
-                        level: 1,
-                        edgeText: "",
-                        data: {
-                          complete: false,
-                          form: {
-                          } //你的业务数据
-                        }
-                      }
-                    ]
+                      complete: false,
+                      form: {
+                      } //你的业务数据
+                    }
                   }
                 ]
               }
@@ -120,6 +125,7 @@ export default {
     };
   },
   created() {
+    let that = this;
     //根节点
     Graph.registerNode(
       'original—add',
@@ -239,6 +245,23 @@ export default {
       },
       true,
     )
+    // 直的边
+    Graph.registerEdge(
+      'straight-edge',
+      {
+        inherit: 'edge',
+        attrs: {
+          line: {
+            strokeWidth: 2,
+            stroke: '#A2B1C3',
+            sourceMarker: null,
+            targetMarker: null,
+          },
+        }, //样式代码
+        zIndex: 0
+      },
+      true,
+    )
 
     //编辑
     Graph.registerNodeTool('edit', {
@@ -315,9 +338,7 @@ export default {
       y: '100%',
       offset: { x: -63, y: -72 },
       onClick({ cell }) {
-        if (this.removeNode(cell.id, this.data)) {
-          this.render(this.graph, this.data)
-        }
+        that.removeNode(cell.id)
       }
     })
 
@@ -353,9 +374,9 @@ export default {
       offset: { x: -31, y: -72 },
       onClick({ cell }) {
         const { id } = cell
-        const dataItem = this.findItem(this.data, id).node
-        const lastNode = this.lastChild(dataItem)//找到当前node的最后一级，添加
-        if (this.addChildNode(lastNode.id, '并且', this.data)) this.render(this.graph, this.data)
+        const dataItem = that.findItem(that.data, id).node
+        const lastNode = that.lastChild(dataItem)//找到当前node的最后一级，添加
+        if (that.addChildNode(lastNode.id, '并且', that.data)) that.render(that.graph, that.data)
       }
     })
 
@@ -391,7 +412,7 @@ export default {
       offset: { x: -31, y: -72 },
       onClick({ cell }) {
         const { id } = cell
-        if (this.addChildNode(id, '', this.data)) this.render(this.graph, this.data)
+        if (that.addChildNode(id, '', that.data)) that.render(that.graph, that.data)
       }
     })
 
@@ -415,22 +436,22 @@ export default {
       distance: '100%',
       offset: { y: -15, x: -15 },
       onClick({ cell }) {
-        const { node, parent } = this.findItem(this.data, cell.target.cell)
+        const { node, parent } = that.findItem(that.data, cell.target.cell)
         console.log(node, parent);
-        // const newId = Math.random(10, 1000)
-        // const childP = {
-        //   children: [node],
-        //   id: newId,
-        //   type: 'relative',
-        //   width: 44,
-        //   height: 44,
-        //   data: { relative: 'and', type: 'document' }
-        // }
-        // const currentIndex = parent.children.findIndex(item => item.id === node.id)
-        // parent.children[currentIndex] = childP
-        // if (this.addChildNode(newId, '', this.data)) {
-        //   this.render(this.graph, this.data)
-        // }
+        const newId = Math.random(10, 1000)
+        const childP = {
+          children: [node],
+          id: newId,
+          type: 'relative',
+          width: 44,
+          height: 44,
+          data: { relative: 'and', type: 'document' }
+        }
+        const currentIndex = parent.children.findIndex(item => item.id === node.id)
+        parent.children[currentIndex] = childP
+        if (that.addChildNode(newId, '', that.data)) {
+          that.render(that.graph, that.data)
+        }
       }
     })
   },
@@ -480,6 +501,8 @@ export default {
       const { id } = node;
       this.addOriginal(id)
     })
+    //节点数据变化
+    this.graph.on('node:change:data', this.nodeDataChange)
     this.graph.on('change:relative', ({ node }) => {
       const { id } = node;
       const res = this.findItem(this.data, id);
@@ -487,6 +510,24 @@ export default {
       if (dataItem.type === 'relative') {
         dataItem.data.relative = dataItem.data.relative === 'and' ? 'or' : 'and';
         this.render(this.graph);
+      }
+    })
+    this.graph.on('node:mouseenter', ({ node }) => {
+      if (['condition-text', 'relative'].includes(node.shape)) {
+        if (node.shape === 'condition-text') {
+          node.setAttrs({ body: { fill: '#E9F0FF', stroke: '#296FFF' } })
+          node.addTools(['edit', 'del', 'add-condition'])
+        } else {
+          node.addTools(['del', 'relative:add-condition'])
+        }
+      }
+    })
+    this.graph.on('node:mouseleave', ({ node }) => {
+      if (['condition-text', 'relative'].includes(node.shape)) {
+        node.removeTools()
+        if (node.shape === 'condition-text') {
+          node.setAttrs({ body: { stroke: '#CCC', fill: '#fff' } })
+        }
       }
     })
     this.graph.on('edge:mouseenter', ({ edge }) => {
@@ -498,29 +539,17 @@ export default {
     this.graph.on('edge:mouseleave', ({ edge }) => {
       edge.removeTools(['edge:add-condition'])
     })
-    this.graph.on('node:mouseenter', ({ node }) => {
-      if (['condition-text', 'relative'].includes(node.shape)) {
-        if (node.shape === 'condition-text') {
-          node.setAttrs({ body: { fill: '#E9F0FF', stroke: '#296FFF' } })
-          node.addTools(['edit', 'del', 'add-condition'])
-        } else {
-          node.addTools(['del', 'relative:add-condition'])
-        }
-        //  this.addTool(node)
-      }
-    })
-    this.graph.on('node:mouseleave', ({ node }) => {
-      if (['condition-text', 'relative'].includes(node.shape)) {
-        node.removeTools()
-        if (node.shape === 'condition-text') {
-          node.setAttrs({ body: { stroke: '#CCC', fill: '#fff' } })
-        }
-        // this.removeTool(node)
-      }
-    })
     this.render(this.graph);
   },
   methods: {
+    nodeDataChange(e) {
+      const current = e.current;
+      const res = this.findItem(this.data, e.cell.id);
+      const dataItem = res.node; //拿到当前节点
+      dataItem.data = current  //赋值
+      dataItem.type = current.complete ? 'condition-text' : 'vue-shape'  //改变类型
+      this.render(this.graph)
+    },
     render(graph) {
       const result = Hierarchy.mindmap(this.data, {
         direction: 'H',
@@ -591,6 +620,7 @@ export default {
           if (children) {
             children.forEach((item) => {
               const { id, data: itemData } = item
+              console.log(itemData);
               cells.push(
                 graph.createEdge({
                   shape: itemData.edgeText ? 'straight-edge' : 'mindmap-edge',
@@ -620,9 +650,8 @@ export default {
     addOriginal(id) {
       const res = this.findItem(this.data, id);
       const dataItem = res.node; //拿到当前节点
-      let count = this.countNodes(dataItem)
-
-      if (dataItem.children) {
+      let count = this.getMaxId(dataItem)
+      if (dataItem.children && dataItem.children.length > 0) {
         let oldChild = dataItem.children
         dataItem.children = [{
           id: ++count,
@@ -734,33 +763,33 @@ export default {
       return null
     },
     //移除节点
-    removeNode(id, data) {
-      const res = this.findItem(data, id)
+    removeNode(id) {
+      const res = this.findItem(this.data, id)
       const dataItem = res.parent
       if (dataItem && dataItem.children) {
         const { children } = dataItem
         const index = children.findIndex((item) => item.id === id)
         children.splice(index, 1) //删除当前
         if (children.length && children.length < 2) { //并且或者 只有一个子级时 删除并且或者节点
-          const p2 = this.findItem(data, dataItem.id).parent //父级的父级
+          const p2 = this.findItem(this.data, dataItem.id).parent //父级的父级
           const p2OtherChildren = p2.children.filter(item => item.id !== dataItem.id)
           p2.children = [...p2OtherChildren, ...children]
         }
-        return true
+        this.render(this.graph)
       }
-      return null
     },
-    //传入根节点拿到所有节点数
-    countNodes(node) {
-      let count = 1; // 当前节点
+    //传入根节点拿到子节点中具有最大id值的节点id
+    getMaxId(node) {
+      let maxId = node.id; // 当前节点的id作为初始最大值
 
       if (node.children && node.children.length > 0) {
         for (let child of node.children) {
-          count += this.countNodes(child); // 递归计算子节点数
+          const childMaxId = this.getMaxId(child); // 递归获取子节点中的最大id值
+          maxId = Math.max(maxId, childMaxId); // 更新最大id值
         }
       }
 
-      return count;
+      return maxId;
     }
   },
 };
