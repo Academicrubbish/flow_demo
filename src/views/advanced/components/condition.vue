@@ -1,8 +1,8 @@
 <template>
-  <div ref="condition" class="container">
+  <div class="container">
     <el-form :inline="true" :rules="rules" :model="form" ref="ruleForm" class="demo-form-inline">
       <el-form-item prop="cnName">
-        <el-select size="mini" v-model="form.cnName" filterable placeholder="搜索项目">
+        <el-select size="mini" v-model="form.cnName" filterable placeholder="搜索项目" @change="aaa">
           <el-option v-for="item in dictList" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
@@ -30,13 +30,13 @@ export default {
     return {
       rules: {
         cnName: [
-          { required: true, message: '不可为空', trigger: 'change' }
+          { required: true, message: '不可为空', trigger: 'blur' }
         ],
         relation: [
-          { required: true, message: '不可为空', trigger: 'change' }
+          { required: true, message: '不可为空', trigger: 'blur' }
         ],
         values: [
-          { required: true, message: '不可为空', trigger: 'change' }
+          { required: true, message: '不可为空', trigger: 'blur' }
         ]
       },
       dictList: [
@@ -55,64 +55,80 @@ export default {
         relation: null,
         values: null,
       },
+      isEdit: false,
+      oldForm: null
     }
   },
   mounted() {
     const node = this.getNode();
+    if (JSON.stringify(node.getData().form) !== '{}') {
+      this.form = JSON.parse(JSON.stringify(node.getData().form));
+      this.oldForm = JSON.parse(JSON.stringify(node.getData().form));
+      this.isEdit = true;
+    }
     // 监听数据改变事件
-    node.on("change:data");
+    node.on("change:data", () => {
+      console.log('111');
+    });
   },
+  // complate: true, isEdit: false   创建 确定 → 保存
+  // complate: false, isEdit: false  创建 取消 → 删除
+  // complate: true, isEdit: true    编辑 确定 → 保存
+  // complate: false, isEdit: true   编辑 取消 → 还原
   methods: {
     onSubmit(formName) {
       this.$refs[formName].validate((valid) => {
         if (valid) {
           const node = this.getNode();
-          const { complete, form } = node.getData();
           node.setData({
-            complete: true,
-            form: this.form
+            complate: true,
+            form: this.form,
+            isEdit: this.isEdit
           });
         }
       })
     },
-    clear() { }
-  },
-  watch: {
-    'form.cnName': {
-      handler(val) {
-        if (val) {
-          switch (val) {
-            case '年龄':
-              this.relaList = [
-                {
-                  value: '大于',
-                  label: '大于'
-                },
-                {
-                  value: '小于',
-                  label: '小于'
-                },
-                {
-                  value: '等于',
-                  label: '等于'
-                }
-              ]
-              break;
-            case '性别':
-              this.relaList = [
-                {
-                  value: '包含',
-                  label: '包含'
-                }
-              ]
-              break;
-          }
-          this.form.relation = this.relaList.length == 1 ? this.relaList[0].value : null;
-          this.form.values = null;
+    clear() {
+      const node = this.getNode();
+      node.setData({
+        complate: false,
+        form: this.isEdit ? this.oldForm : this.form,
+        isEdit: this.isEdit
+      })
+    },
+    aaa(val) {
+      if (val) {
+        switch (val) {
+          case '年龄':
+            this.relaList = [
+              {
+                value: '大于',
+                label: '大于'
+              },
+              {
+                value: '小于',
+                label: '小于'
+              },
+              {
+                value: '等于',
+                label: '等于'
+              }
+            ]
+            break;
+          case '性别':
+            this.relaList = [
+              {
+                value: '包含',
+                label: '包含'
+              }
+            ]
+            break;
         }
+        this.form.relation = this.relaList.length == 1 ? this.relaList[0].value : null;
+        this.form.values = null;
       }
     }
-  }
+  },
 }
 </script>
 

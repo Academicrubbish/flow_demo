@@ -4,7 +4,7 @@
   </div>
 </template>
 <script>
-import condition from "@/components/condition.vue";
+import condition from "./components/condition.vue";
 import { Graph } from "@antv/x6";
 import Hierarchy from "@antv/hierarchy";
 import "@antv/x6-vue-shape";
@@ -45,7 +45,7 @@ export default {
                     level: 1, //判断它是第几级的条件节点
                     edgeText: "",
                     data: {
-                      complete: true,
+                      complate: true,
                       form: {
                         cnName: "性别",
                         relation: "包含",
@@ -61,7 +61,7 @@ export default {
                     level: 1, //判断它是第几级的条件节点
                     edgeText: "",
                     data: {
-                      complete: true,
+                      complate: true,
                       form: {
                         cnName: "性别",
                         relation: "包含",
@@ -77,7 +77,7 @@ export default {
                     level: 1, //判断它是第几级的条件节点
                     edgeText: "",
                     data: {
-                      complete: true,
+                      complate: true,
                       form: {
                         cnName: "性别",
                         relation: "包含",
@@ -95,7 +95,7 @@ export default {
                 level: 1, //判断它是第几级的条件节点
                 edgeText: "",
                 data: {
-                  complete: true,
+                  complate: true,
                   form: {
                     cnName: "年龄",
                     relation: "大于",
@@ -106,14 +106,15 @@ export default {
                   {
                     id: 9,
                     type: "vue-shape", //自定义组件 业务节点
-                    width: 633,
+                    width: 613,
                     height: 38,
                     level: 1,
                     edgeText: "并且",
                     data: {
-                      complete: false,
+                      complate: false,
                       form: {
-                      } //你的业务数据
+                      }, //你的业务数据
+                      isEdit: false,
                     }
                   }
                 ]
@@ -126,7 +127,7 @@ export default {
   },
   created() {
     let that = this;
-    //根节点
+    // 注册根节点
     Graph.registerNode(
       'original—add',
       {
@@ -148,7 +149,7 @@ export default {
       true,
     )
 
-    //表示《并且 或者》的关系节点
+    // 注册《并且 或者》的关系节点
     Graph.registerNode(
       'relative',
       {
@@ -188,7 +189,7 @@ export default {
       }
     )
 
-    //显示条件语句
+    // 注册条件语句
     Graph.registerNode(
       'condition-text',
       {
@@ -206,19 +207,15 @@ export default {
         attrs: {}//样式代码
       }
     )
-    //  注册vue组件
+    // 注册vue组件
     Graph.registerNode(
       "condition",
       {
         inherit: "vue-shape",
-        x: 200,
-        y: 150,
-        width: 150,
-        height: 100,
         component: condition,
       }
     );
-    // 弯的边
+    // 注册弯的边
     Graph.registerEdge(
       'mindmap-edge',
       {
@@ -245,7 +242,7 @@ export default {
       },
       true,
     )
-    // 直的边
+    // 注册直的边
     Graph.registerEdge(
       'straight-edge',
       {
@@ -263,7 +260,7 @@ export default {
       true,
     )
 
-    //编辑
+    // 注册编辑工具
     Graph.registerNodeTool('edit', {
       inherit: 'button', // 基类名称，使用已经注册的工具名称。
       markup: [
@@ -295,19 +292,20 @@ export default {
       offset: { x: -95, y: -72 },
       onClick({ cell }) {
         const dataItem = cell.getData()
-        this.setData(this.data, cell.id, { ...dataItem, complete: false, isEdit: true })
-        cell.setData({ ...dataItem, complete: false, isEdit: true })
+        that.setData(that.data, cell.id, { ...dataItem, complate: true, isEdit: true })
+        cell.setData({ ...dataItem, complate: true, isEdit: true })
+
         //打开编辑时，子级元素偏移
         const firstChild = cell.getChildAt(0)
         if (firstChild) {
-          const cellWidth = dataItem.form.unit ? 844 : 744
+          const cellWidth = 613
           const x = cellWidth - firstChild.position({ relative: true }).x + 80 //编辑框 - 第一个子级位置 - 连接线宽 = 子级偏移量
           cell.getChildAt(0).translate(x)
         }
       }
     })
 
-    //删除
+    // 注册删除工具
     Graph.registerNodeTool('del', {
       inherit: 'button', // 基类名称，使用已经注册的工具名称。
       markup: [
@@ -342,7 +340,7 @@ export default {
       }
     })
 
-    //新增限定条件
+    // 注册新增限定条件
     Graph.registerNodeTool('add-condition', {
       inherit: 'button', // 基类名称，使用已经注册的工具名称。
       markup: [
@@ -376,7 +374,7 @@ export default {
         const { id } = cell
         const dataItem = that.findItem(that.data, id).node
         const lastNode = that.lastChild(dataItem)//找到当前node的最后一级，添加
-        if (that.addChildNode(lastNode.id, '并且', that.data)) that.render(that.graph, that.data)
+        if (that.addChildNode(lastNode.id, '并且', that.data)) that.render(that.graph)
       }
     })
 
@@ -412,7 +410,7 @@ export default {
       offset: { x: -31, y: -72 },
       onClick({ cell }) {
         const { id } = cell
-        if (that.addChildNode(id, '', that.data)) that.render(that.graph, that.data)
+        if (that.addChildNode(id, '', that.data)) that.render(that.graph)
       }
     })
 
@@ -437,8 +435,8 @@ export default {
       offset: { y: -15, x: -15 },
       onClick({ cell }) {
         const { node, parent } = that.findItem(that.data, cell.target.cell)
-        console.log(node, parent);
-        const newId = Math.random(10, 1000)
+        if (node.edgeText) node.edgeText = '';
+        const newId = that.getMaxId() + 1;
         const childP = {
           children: [node],
           id: newId,
@@ -450,7 +448,7 @@ export default {
         const currentIndex = parent.children.findIndex(item => item.id === node.id)
         parent.children[currentIndex] = childP
         if (that.addChildNode(newId, '', that.data)) {
-          that.render(that.graph, that.data)
+          that.render(that.graph)
         }
       }
     })
@@ -497,12 +495,10 @@ export default {
       },
     });
     //根结点添加
-    this.graph.on('add:original', ({ node }) => {
-      const { id } = node;
-      this.addOriginal(id)
-    })
-    //节点数据变化
+    this.graph.on('add:original', this.addOriginal)
+    //节点数据变化，vue表单的提交，取消，编辑都会触发它
     this.graph.on('node:change:data', this.nodeDataChange)
+    //切换关系节点
     this.graph.on('change:relative', ({ node }) => {
       const { id } = node;
       const res = this.findItem(this.data, id);
@@ -512,6 +508,7 @@ export default {
         this.render(this.graph);
       }
     })
+    //鼠标进入节点
     this.graph.on('node:mouseenter', ({ node }) => {
       if (['condition-text', 'relative'].includes(node.shape)) {
         if (node.shape === 'condition-text') {
@@ -522,6 +519,7 @@ export default {
         }
       }
     })
+    //鼠标离开节点
     this.graph.on('node:mouseleave', ({ node }) => {
       if (['condition-text', 'relative'].includes(node.shape)) {
         node.removeTools()
@@ -530,26 +528,20 @@ export default {
         }
       }
     })
+    //鼠标进入边
     this.graph.on('edge:mouseenter', ({ edge }) => {
       const targetNode = this.graph.getCellById(edge.target.cell)
       if (['condition-text', 'relative'].includes(targetNode.shape)) {
         edge.addTools(['edge:add-condition'])
       }
     })
+    //鼠标离开边
     this.graph.on('edge:mouseleave', ({ edge }) => {
       edge.removeTools(['edge:add-condition'])
     })
     this.render(this.graph);
   },
   methods: {
-    nodeDataChange(e) {
-      const current = e.current;
-      const res = this.findItem(this.data, e.cell.id);
-      const dataItem = res.node; //拿到当前节点
-      dataItem.data = current  //赋值
-      dataItem.type = current.complete ? 'condition-text' : 'vue-shape'  //改变类型
-      this.render(this.graph)
-    },
     render(graph) {
       const result = Hierarchy.mindmap(this.data, {
         direction: 'H',
@@ -572,7 +564,7 @@ export default {
       const cells = []
       const traverse = (hierarchyItem, parentId) => {
         if (hierarchyItem) {
-          const { data, children } = hierarchyItem
+          const { data, children } = hierarchyItem;
           const node = graph.createNode({
             ...data,
             shape: data.type,
@@ -600,7 +592,6 @@ export default {
           }
           //关系节点，默认是并且为蓝色，是或者的话，需要切换颜色判断
           if (data.type === 'relative') {
-
             node.setAttrs(
               data.data.relative === 'or' ? {
                 body: { stroke: '#CEE8D9', fill: '#CEE8D9' },
@@ -620,7 +611,6 @@ export default {
           if (children) {
             children.forEach((item) => {
               const { id, data: itemData } = item
-              console.log(itemData);
               cells.push(
                 graph.createEdge({
                   shape: itemData.edgeText ? 'straight-edge' : 'mindmap-edge',
@@ -647,10 +637,10 @@ export default {
       // graph.scaleContentToFit({ maxScale: 1 })
       graph.centerContent()
     },
-    addOriginal(id) {
-      const res = this.findItem(this.data, id);
-      const dataItem = res.node; //拿到当前节点
-      let count = this.getMaxId(dataItem)
+    //点击根节点新增
+    addOriginal() {
+      const dataItem = this.data;
+      let count = this.getMaxId()
       if (dataItem.children && dataItem.children.length > 0) {
         let oldChild = dataItem.children
         dataItem.children = [{
@@ -666,13 +656,14 @@ export default {
             {
               id: ++count,
               type: "vue-shape", //自定义组件 业务节点
-              width: 633,
+              width: 613,
               height: 38,
               level: 1,
               edgeText: "",
               data: {
-                complete: false,
-                form: {}
+                complate: false,
+                form: {},
+                isEdit: false
               }
             }
           ]
@@ -681,18 +672,38 @@ export default {
         dataItem.children = [{
           id: ++count,
           type: "vue-shape", //自定义组件 业务节点
-          width: 633,
+          width: 613,
           height: 38,
           level: 1,
           edgeText: "",
           data: {
-            complete: false,
-            form: {}
+            complate: false,
+            form: {},
+            isEdit: false
           }
         }]
       }
       this.render(this.graph)
-
+    },
+    //监听节点数据变化
+    nodeDataChange(e) {
+      const current = e.current;
+      const res = this.findItem(this.data, e.cell.id);
+      const dataItem = res.node; //拿到当前节点
+      if (dataItem.type === 'condition-text') {  //判断是否为条件节点，如果是则点击编辑
+        dataItem.data = current  //赋值
+        dataItem.type = 'vue-shape'
+        dataItem.width = 613
+        this.render(this.graph)
+      } else {
+        if (current.complate || current.isEdit) { //该节点填写完毕 或在编辑状态下取消填写
+          dataItem.data = current  //赋值或还原
+          dataItem.type = 'condition-text'
+          this.render(this.graph)
+        } else { //新增状态下取消填写，删除节点
+          this.removeNode(e.cell.id)
+        }
+      }
     },
     //查找节点的父节点 当前节点，顶级节点的数据
     findItem(obj, id) {
@@ -726,32 +737,38 @@ export default {
     },
     //设置某个节点的data
     setData(obj, id, dataItem) {
+      let that = this;
       if (obj.id === id) {
         obj.data = dataItem
         if (['vue-shape', 'condition-text'].includes(obj.type)) {
-          obj.type = dataItem.complete ? 'condition-text' : 'vue-shape'
+          obj.type = dataItem.complate ? 'condition-text' : 'vue-shape'
         }
         return
       }
       if (obj.children) {
         obj.children.forEach(child => {
-          this.setData(child, id, dataItem)
+          that.setData(child, id, dataItem)
         })
       }
     },
-
     //插入节点
     addChildNode(id, edgeText, data) {
       const res = this.findItem(data, id)
-      const dataItem = res.node
+      const dataItem = res.node;
+      const newId = this.getMaxId() + 1;
       if (dataItem) {
         const item = {
-          id: Math.random(10, 1000),
+          id: newId,
           type: 'vue-shape',
-          width: 744,
-          height: 44, //内容宽高 + padding20 + 边框4
+          width: 613,
+          height: 38, //内容宽高 + padding20 + 边框4
           level: dataItem.level === 1 ? dataItem.level + 1 : 1,
-          edgeText
+          edgeText,
+          data: {
+            complate: false,
+            form: {},
+            isEdit: true
+          }
         }
         if (dataItem.children) {
           dataItem.children.push(item)
@@ -778,18 +795,21 @@ export default {
         this.render(this.graph)
       }
     },
-    //传入根节点拿到子节点中具有最大id值的节点id
-    getMaxId(node) {
-      let maxId = node.id; // 当前节点的id作为初始最大值
+    //拿到节点中具有最大id值的节点id
+    getMaxId() {
+      let node = this.data
+      return (function getId(node) {
+        let maxId = node.id; // 当前节点的id作为初始最大值
 
-      if (node.children && node.children.length > 0) {
-        for (let child of node.children) {
-          const childMaxId = this.getMaxId(child); // 递归获取子节点中的最大id值
-          maxId = Math.max(maxId, childMaxId); // 更新最大id值
+        if (node.children && node.children.length > 0) {
+          for (let child of node.children) {
+            const childMaxId = getId(child); // 递归获取子节点中的最大id值
+            maxId = Math.max(maxId, childMaxId); // 更新最大id值
+          }
         }
-      }
 
-      return maxId;
+        return maxId;
+      }(node))
     }
   },
 };
