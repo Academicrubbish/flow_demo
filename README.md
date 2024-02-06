@@ -1,4 +1,5 @@
 # flow_demo
+![image](https://github.com/Academicrubbish/flow_demo/assets/62707624/a49d4a57-be3b-4f68-a592-6be438aaf2e2)
 
 ## Project setup
 ```
